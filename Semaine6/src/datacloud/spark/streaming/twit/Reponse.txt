@@ -1,0 +1,7 @@
+Exercice 2
+
+Question3
+
+A chaque lancement de l'application, le premier classement se met en place à partir d'un certain temps.
+En changeant le classement attendu, avant que ce nouveau classement se met en place, il faut que le nombre de chaque hashtag dépasse celui des anciens hashtags de l'ancien classement.
+Donc, en prenant en compte tous les états depuis le lancement de l'application, chaque nouveau classement attendu peut mettre un temps infini à se mettre en place.

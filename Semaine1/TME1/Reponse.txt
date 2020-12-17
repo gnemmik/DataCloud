@@ -1,0 +1,120 @@
+# notes sur le tme hadoop Kimmeng Ly
+
+Exercice 1
+
+Q1. On commence par créer les fichiers de données d’entrée suivants grâce au script generator.sh et le fichier loremIpsum qui vous ont été fournis :
+    ./generator.sh loremIpsum 170
+    ./generator.sh loremIpsum 150
+    ./generator.sh loremIpsum 140
+    ./generator.sh loremIpsum 20
+
+Ceci permet de créer respectivement des fichiers de 170 Mo, 150 Mo, 140 Mo et 20 Mo.
+
+
+Q2. On upload ensuite ces fichiers sur la racine du HDFS : 
+    hdfs dfs -put loremIpsum-170 /
+    hdfs dfs -put loremIpsum-150 /
+    hdfs dfs -put loremIpsum-140 /
+    hdfs dfs -put loremIpsum-20 /
+
+On vérifie avec "hdfs dfs -ls /" :
+    Found 4 items
+    -rw-r--r--   1 kimmeng supergroup  147015681 2020-10-13 12:56 /loremIpsum-140
+    -rw-r--r--   1 kimmeng supergroup  157516801 2020-10-13 12:56 /loremIpsum-150
+    -rw-r--r--   1 kimmeng supergroup  178519041 2020-10-13 12:56 /loremIpsum-170
+    -rw-r--r--   1 kimmeng supergroup   21002241 2020-10-13 12:56 /loremIpsum-20
+
+
+Q3. Analyse du code de WordCount fourni :
+On a une classe WordCount qui contient deux classes memebres :
+    - WordCountMapper qui étend Mapper<LongWritable, Text, Text, IntWritable> : elle fait office de mapper, c'est-à-dire que dans cette classe on va redéfinir la méthode map qui va séparer les mots et émettre sur le flux.
+    - WordCountReducer qui étend Reducer<Text,IntWritable,Text,IntWritable> : elle fait office de reducer, c'est-à-dire que dans cette classe on va redéfinir la méthode reduce qui fera le comptage de mots.
+et un main qui contient la configuration du programme map-reduce WordCount ainsi que les tests sur les arguments fournis.
+
+
+Q4. On crée un chemin de sortie sur le HDFS : 
+    > hdfs dfs -mkdir /output
+On lance le WordCount sur le fichier loremIpsum-170 : 
+    > yarn jar WordCount.jar mapreduce/WordCount /loremIpsum-170 /output
+Pendant que le job s'exécute on lance la commande ps uxf dans un autre terminal et on observe que 3 containers sont lancés et les 3 ont pour ancêtre commun le NodeManager.
+
+    kimmeng    15587  0.7  5.2 3572164 371036 ?      Sl   11:59   0:38 /usr/lib/jvm/java-8-openjdk-amd64/bin/java -Dproc_nodemanager -Djava.net.preferIPv4Stack=true -Dyarn.log.dir=/home/kimmeng/hadoop-3.2.1/logs -Dyarn.log.file=hadoop-kimmeng-nodemanager-matebook.log -Dyarn.home.dir=/home/kimmeng/hadoop-3.2.1 -Dyarn.root.logger=INFO,console -Djava.library.path=/home/kimmeng/hadoop-3.2.1/lib/native -Dhadoop.log.dir=/home/kimmeng/hadoop-3.2.1/logs -Dhadoop.log.file=hadoop-kimmeng-nodemanager-matebook.log -Dhadoop.home.dir=/home/kimmeng/hadoop-3.2.1 -Dhadoop.id.str=kimmeng -Dhadoop.root.logger=INFO,RFA -Dhadoop.policy.file=hadoop-policy.xml -Dhadoop.security.logger=INFO,NullAppender org.apache.hadoop.yarn.server.nodemanager.NodeManager
+    kimmeng    44581  0.0  0.0   3896  2772 ?        S    13:26   0:00  \_ bash /tmp/hadoop-kimmeng/nm-local-dir/usercache/kimmeng/appcache/application_1602583156766_0001/container_1602583156766_0001_01_000001/default_container_executor.sh
+    kimmeng    44583  0.0  0.0  12040  3344 ?        Ss   13:26   0:00      \_ /bin/bash -c /usr/lib/jvm/java-8-openjdk-amd64/bin/java -Djava.io.tmpdir=/tmp/hadoop-kimmeng/nm-local-dir/usercache/kimmeng/appcache/application_1602583156766_0001/container_1602583156766_0001_01_000001...
+    kimmeng    44596  218  4.6 2800676 328824 ?      Sl   13:26   0:13          \_ /usr/lib/jvm/java-8-openjdk-amd64/bin/java -Djava.io.tmpdir=/tmp/hadoop-kimmeng/nm-local-dir/usercache/kimmeng/appcache/application_1602583156766_0001/container_1602583156766_0001_01_000001...
+
+
+Q5. Le résultat du programme dans le dossier de sortie : 
+    > hdfs dfs -ls /output
+    Found 2 items
+    -rw-r--r--   1 kimmeng supergroup          0 2020-10-13 13:28 /output/_SUCCESS
+    -rw-r--r--   1 kimmeng supergroup       2469 2020-10-13 13:28 /output/part-r-00000
+
+Deux fichiers sont produits. 
+- _SUCCESS est vide
+- part-r-00000 contient tous les mots avec leur nombre d'occurrence : une ligne correspond à un mot et son nombre d'occurrence.
+
+(Les fichiers de sortie sont par défaut nommés part-x-yyyyy où:
+    - x est soit 'm' ou 'r', selon que le travail était un travail de map-only, ou de reduce
+    - yyyyy est le numéro de la tâche Mapper ou Reducer )
+
+Dans notre cas, on a d'un seul reduce, donc le fichier de sortie sera forcément part-r-00000.
+
+
+Q6. Pour le fichier loremIpsum-170 : 
+Job Counters 
+		Launched map tasks=2
+		Launched reduce tasks=1
+
+2 tâches de map et 1 tâche de reduce ont été lancées.
+
+
+Q7. Pour le fichier loremIpsum-20 : 
+Job Counters 
+		Launched map tasks=1
+		Launched reduce tasks=1
+
+1 tâche de map et 1 tâche de reduce ont été lancées.
+
+
+Q8. On crée un nouveau dossier HDFS pour mettre les fichiers loremIpsum-20 et loremIpsum-150.
+> hdfs dfs -mkdir /input_20_150
+
+On lance le job.
+Job Counters 
+		Launched map tasks=3
+		Launched reduce tasks=1
+
+On peut observer que 3 tâches de map ont été lancées pour 20+150=170 Mo de données alors que seulement 2 tâches de map ont été lancées pour le fichier loremIpsum-170 qui a aussi 170 Mo de données.
+On peut supposer que 1 tâche de map a été lancée pour le fichier loremIpsum-20 et 2 tâches de map pour le fichier loremIpsum-150.
+
+
+Q9. Plus la donnée d'entrée est grande et plus le nombre de maps est grand. De plus, un fichier nécessite un map au minimum (même si celui-ci est petit).
+De plus, par défaut dans la partie HDFS, les fichiers sont divisés en blocs de 128 Mo. On peut donc supposer qu'une tâche de map peut traîter jusqu'à 128 Mo de données d'entrée.
+
+
+Q10. Pour le fichier loremIpsum-140 :
+Job Counters 
+		Launched map tasks=1
+		Launched reduce tasks=1
+Pour 140 Mo de données d'entrée 1 seule tâche de map a été lancée. Avec l'hypothèse faite à la question précédente, on s'attendait à avoir 2 tâches de map de lancées.
+Contradiction donc.
+
+
+Q11. Analyse de getSplits.
+
+
+Q12. En exploitant, le code de FileInputFormat et plus particulièrement la méthode getSplits, on remarque l'attribut "SPLIT_SLOP = 1.1", cet attribut correspond à la marge d'un split, soit 10% ici.
+On déduit donc que le maximum de données d'entrée que un split peut traîter est 128 Mo + 10% de 128 Mo, soit 140,8 Mo.
+C'est pourquoi dans la question 10, on a qu'une seule tâche de map de lancée pour un fichier de 140 Mo.
+
+
+Q13. En activant l'exécution spéculative, et en relancant un job avec le fichier loremIpsum-150, on obtient:
+Job Counters 
+		Killed map tasks=1
+		Launched map tasks=3
+		Launched reduce tasks=1
+
+On remarque que le nombre de maps a augmenté de 1 (3 maintenant au lieu de 2 auparavant).
+En effet, quand une map est anormalement lente, une map "speculative" est lancée en parallèle. 
+Ces deux maps traîtent les mêmes tâches, celle qui se termine en premier est retenue, l'autre est tuée. 
